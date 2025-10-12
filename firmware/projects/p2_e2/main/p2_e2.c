@@ -1,3 +1,43 @@
+/*! @mainpage Guia 2 Actividad 2
+ *
+ * @section genDesc General Description
+ *
+ * Se diseñó el firmware de manera que cumple con las siguientes funcionalidades:
+ * <ol>
+ * 		<li>Mostrar distancia medida utilizando los leds de la siguiente manera: </li>
+ * - Si la distancia es menor a 10 cm, apagar todos los LEDs.
+ * - Si la distancia está entre 10 y 20 cm, encender el LED_1.
+ * - Si la distancia está entre 20 y 30 cm, encender el LED_2 y LED_1.
+ * - Si la distancia es mayor a 30 cm, encender el LED_3, LED_2 y LED_1.
+ * 		<li>Mostrar el valor de distancia en cm utilizando el display LCD. </li>
+ * 		<li>Usar TEC1 para activar y detener la medición. </li>
+ * 		<li>Usar TEC2 para mantener el resultado (“HOLD”): sin pausar la medición. </li>
+ * 		<li>Refresco de medición: 1 s (1000 ms). </li>
+ * </ol>
+ *
+ * <a href="https://drive.google.com/file/d/1yIPn12GYl-s8fiDQC3_fr2C4CjTvfixg/view">Operation Example</a>
+ *
+ * @section hardConn Hardware Connection
+ *
+ * |    Peripheral  | 	ESP32-C6	|
+ * |:--------------:|:--------------|
+ * | 	ECHO	 	| 	GPIO_3		|
+ * | 	TRIGGER	 	| 	GPIO_2		|
+ * | 	Vcc		 	| 	+5V			|
+ * | 	GND		 	| 	GND			|
+ * | 	LED_1	 	| 	GPIO_11		|
+ * | 	LED_2	 	| 	GPIO_10		|
+ * | 	LED_3	 	| 	GPIO_5		|
+ *
+ * @section changelog Changelog
+ *
+ * |   Date	    | Description                                    |
+ * |:----------:|:-----------------------------------------------|
+ * | 13/10/2025 | Document creation		                         |
+ *
+ * @author Fabiana F. Roskopf (fabianafroskopf@gmail.com)
+ *
+ */
 /*==================[inclusions]=============================================*/
 #include <stdio.h>
 #include <stdint.h>
@@ -10,22 +50,52 @@
 #include "switch.h"
 #include "timer_mcu.h"
 /*==================[macros and definitions]=================================*/
+/**
+ * @def CONFIG_MEASURE_PERIOD
+ * @brief Define la tasa de refresco de la tarea de medición y muestra.
+ * @details 300 ms.
+ */
+#define CONFIG_MEASURE_PERIOD 300
 
-#define CONFIG_MEASURE_PERIOD 300 // ms entre mediciones
-
-#define MIN_DIST 10 // cm
+/**
+ * @def MIN_DIST
+ * @brief Define la distancia mínima para encender el primer LED.
+ * @details 10 cm.
+ */
+#define MIN_DIST 10
+/**
+ * @def MED_DIST
+ * @brief Define la distancia media para encender el segundo LED.
+ * @details 20 cm.
+ */
 #define MED_DIST 20
+/**
+ * @def MAX_DIST
+ * @brief Define la distancia máxima para encender el tercer LED.
+ * @details 30 cm.
+ */
 #define MAX_DIST 30
 
 /*==================[internal data definition]===============================*/
+/**
+ * @brief identificador de tipo TaskHandle_t de la tarea "Medir_Mostrar".
+ * @details Se utiliza para la creación de la tarea y para su control. */
 TaskHandle_t Medir_MostrarPantalla_task_handle = NULL;
-TaskHandle_t teclas_task_handle = NULL;
 
-bool medir = true; // bandera de “medir”
-bool hold = false; // bandera de “hold”
+/**
+ * @brief bandera de “medir”
+ * @details Indica si se debe medir la distancia. */
+bool medir = true;
+/**
+ * @brief bandera de “hold”
+ * @details Indica si se debe mantener la última medición. */
+bool hold = false;
 
 /*==================[internal functions declaration]=========================*/
-
+/**
+ * @brief Tarea que muestra el resultado del valor medido de distance.
+ * @details Muestra el resultado en el LCD y lo representa en los LEDs según el diseño planteado.
+ */
 void encenderLedSegunDistancia(uint32_t distance)
 {
     if (distance < MIN_DIST)
@@ -58,6 +128,9 @@ void Medir_MostrarPantalla(void *pvParameter)
 }
 
 /*==================[tasks definition]=======================================*/
+/**
+ * @brief Tarea que mide la distancia, muestra el resultado en el LCD y enciende los LEDs.
+ */
 static void Medir_MostrarPantalla_Task(void *pvParameter)
 {
     while (true)
