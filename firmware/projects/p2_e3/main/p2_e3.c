@@ -1,3 +1,50 @@
+/*! @mainpage Guia 2 Actividad 3 - Petracchi, F. M.
+ *
+ * @section genDesc General Description
+ *
+ * Se diseñó el firmware de manera que cumple con las siguientes funcionalidades:
+ * <ol>
+ * 		<li>Mostrar distancia medida utilizando los leds de la siguiente manera: </li>
+ * - Si la distancia es menor a 10 cm, apagar todos los LEDs.
+ * - Si la distancia está entre 10 y 20 cm, encender el LED_1.
+ * - Si la distancia está entre 20 y 30 cm, encender el LED_2 y LED_1.
+ * - Si la distancia es mayor a 30 cm, encender el LED_3, LED_2 y LED_1.
+ * 		<li>Mostrar el valor de distancia en cm utilizando el display LCD. </li>
+ * 		<li>Usar TEC1 para activar y detener la medición. </li>
+ * 		<li>Usar TEC2 para mantener el resultado (“HOLD”): sin pausar la medición. </li>
+ * 		<li>Refresco de medición: 1 s (1000 ms). </li>
+ *
+ * Además debe ser posible controlar la EDU-ESP de la siguiente manera:
+ *  - Con las teclas “O” y “H”, replicar la funcionalidad de las teclas 1 y 2 de la EDU-ESP.
+ *  - Usar “I” para cambiar la unidad de trabajo de "cm" a "pulgadas".
+ *  - Usar “M” para implementar la visualización del máximo.
+ *  - Usar “F” para aumentar la velocidad de lectura, reduciendo de a 100 milisegundos el tiempo de lectura.
+ *  - Usar “S” para disminuir la velocidad de lectura, aumentando de a 100 milisegundos el tiempo de lectura.
+ *
+ * <a href="https://drive.google.com/file/d/1yIPn12GYl-s8fiDQC3_fr2C4CjTvfixg/view"> Example operation </a>
+ *
+ * @section hardConn Hardware Connection
+ *
+ * |    Peripheral  | 	ESP32-C6	|
+ * |:--------------:|:--------------|
+ * | 	ECHO	 	| 	GPIO_3		|
+ * | 	TRIGGER	 	| 	GPIO_2		|
+ * | 	Vcc		 	| 	+5V			|
+ * | 	GND		 	| 	GND			|
+ * |  LED_1 (GREEN)	| 	GPIO_11		|
+ * |  LED_2	(YELL.)	| 	GPIO_10		|
+ * |  LED_3 (RED) 	| 	GPIO_5		|
+ *
+ *
+ * @section changelog Changelog
+ *
+ * |   Date	    | Description                                    |
+ * |:----------:|:-----------------------------------------------|
+ * | 13/10/2025 | Document creation		                         |
+ *
+ * @author Fabiana F. Roskopf (fabianafroskopf@gmail.com)
+ *
+ */
 /*==================[inclusions]=============================================*/
 #include <stdio.h>
 #include <stdint.h>
@@ -11,7 +58,11 @@
 #include "timer_mcu.h"
 #include "uart_mcu.h"
 /*==================[macros and definitions]=================================*/
-
+/**
+ * @def CONFIG_MEASURE_PERIOD
+ * @brief Define la tasa de refresco de la tarea de medición y muestra.
+ * @details 1000 ms
+ */
 #define CONFIG_MEASURE_PERIOD 1000 * 1000    // ms entre mediciones
 #define CONFIG_READING_PERIOD 20             // ms entre lecturas de teclas
 #define TIEMPO_DE_LECTURA_MINIMO 100 * 1000  // 100 ms
@@ -26,12 +77,24 @@ void Medir_MostrarPantalla(void *pvParameter);
 void leer_teclado(void *param);
 
 /*==================[internal data definition]===============================*/
+/**
+ * @brief identificador de tipo TaskHandle_t de la tarea "Medir_MostrarPantalla".
+ * @details Se utiliza para la creación de la tarea y para su control.
+ */
 TaskHandle_t Medir_MostrarPantalla_task_handle = NULL;
-TaskHandle_t teclas_task_handle = NULL;
 
-bool medir = true;     // bandera de “medir”
-bool hold = false;     // bandera de “hold”
-bool pulgadas = false; // bandera de “pulgadas”
+/**
+ * @brief Flag que indica si se debe medir o no.
+ * @details Se utiliza para habilitar o deshabilitar la medición.
+ */
+bool medir = true;
+/**
+ * @brief Flag que indica si se debe mantener mostrando un resultado o no.
+ * @details Se utiliza para habilitar o deshabilitar la modificación de los LEDs y valores mostrados en el LCD.
+ */
+bool hold = false;
+
+bool pulgadas = false;
 
 timer_config_t timer_medir = {
     .timer = TIMER_A,
@@ -40,7 +103,9 @@ timer_config_t timer_medir = {
     .param_p = NULL,
 };
 
-// --- inicializar UART PC ---
+/**
+ * @brief Estructura de configuración del UART.
+ */
 serial_config_t my_uart = {
     .port = UART_PC,        // usa puerto hacia PC
     .baud_rate = 19200,     // velocidad
@@ -133,26 +198,27 @@ void leer_teclado(void *param)
     }
 }
 
-
-
-void mandar_distancia(uint16_t distancia){
+void mandar_distancia(uint16_t distancia)
+{
     // 1. Enviar el texto "Distancia: "
     UartSendString(UART_PC, "Distancia: ");
 
     // 2. Convertir número a cadena (UartItoa devuelve un puntero a un buffer con el número)
-    const char* numero = UartItoa(distancia, 10);
+    const char *numero = UartItoa(distancia, 10);
 
     // 3. Enviar el número convertido
     UartSendString(UART_PC, numero);
 
     // 4. Enviar la unidad
-    if (pulgadas == true){
+    if (pulgadas == true)
+    {
         UartSendString(UART_PC, " in\r\n");
-    } else {
+    }
+    else
+    {
         UartSendString(UART_PC, " cm\r\n");
     }
 }
-
 
 /*==================[tasks definition]=======================================*/
 static void Medir_MostrarPantalla_Task(void *pvParameter)
